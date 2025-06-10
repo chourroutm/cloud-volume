@@ -121,7 +121,18 @@ class Zarr2Metadata(PrecomputedMetadata):
         scale_factors[2] = spatial_unit_in_meters(axis.get("unit", "nanometer"))
         positions[2] = i
 
-    resolution = self.datasets()[mip]["coordinateTransformations"][0]["scale"]
+    # DIRTY FIX 
+    # Find the first 'scale' among all coordinateTransformations
+    # See paragraph 5 at https://ngff.openmicroscopy.org/0.4/index.html#multiscale-md
+    resolution = None
+    for transform in self.datasets()[mip].get("coordinateTransformations", []):
+      if "scale" in transform:
+        resolution = transform["scale"]
+        break
+    if resolution is None:
+      raise ValueError("No 'scale' found in coordinateTransformations.")
+    # END OF DIRTY FIX
+    
     resolution = np.array([
       resolution[positions[0]],
       resolution[positions[1]],
